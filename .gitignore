@@ -1,1 +1,18 @@
+# --- Environment Variables ---
+.env
+
+# --- Rust Build Outputs ---
 /target
+
+# --- IDE and Editor directories ---
+.idea/
+.vscode/
+*.rs.user
+
+# --- OS generated files ---
+.DS_Store
+Thumbs.db
+
+# --- Docker Database Data ---
+# Ignores local volume data so it doesn't get pushed to git
+pgdata
