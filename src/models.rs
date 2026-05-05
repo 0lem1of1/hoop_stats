@@ -8,7 +8,7 @@ pub struct Player {
     pub id: i32,
     pub name: String,
     pub position: String,
-    pub archetype: String,
+    pub archetype: Option<String>,
 }
 
 #[derive(Serialize, FromRow)]
@@ -57,4 +57,54 @@ pub struct SigninResponse {
 pub struct Claims {
     pub sub: i32,
     pub exp: usize,
+    pub purpose: String,
+}
+
+// --- PASSWORD RESET MODELS ---
+
+#[derive(Deserialize)]
+pub struct ForgotPasswordRequest {
+    pub email: String,
+}
+
+#[derive(Deserialize)]
+pub struct ResetPasswordRequest {
+    pub token: String,
+    pub new_password: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct WebhookPayload {
+    pub email: String,
+    pub reset_link: String,
+}
+
+// --- SENDGRID EMAIL MODELS ---
+
+#[derive(Serialize)]
+pub struct SendGridPayload {
+    pub personalizations: Vec<Personalization>,
+    pub from: EmailAddress,
+    pub subject: String,
+    pub content: Vec<Content>,
+}
+
+#[derive(Serialize)]
+pub struct Personalization {
+    pub to: Vec<EmailAddress>,
+    pub subject: String,
+}
+
+#[derive(Serialize)]
+pub struct EmailAddress {
+    pub email: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct Content {
+    #[serde(rename = "type")]
+    pub content_type: String,
+    pub value: String,
 }
