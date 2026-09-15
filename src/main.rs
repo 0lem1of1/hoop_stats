@@ -1,9 +1,10 @@
 mod handlers;
+mod ingest;
 mod models;
 
 use axum::{routing::{get, post}, Router, middleware::from_fn_with_state};
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use std::{env, sync::Arc};
+use std::{env, sync::Arc, time::Duration};
 use tokio::{net::TcpListener, sync::broadcast};
 use reqwest::Client;
 use dashmap::DashMap;
@@ -59,6 +60,15 @@ async fn main() {
     };
 
     println!("Connected to database");
+
+    let season = env::var("NBA_SEASON").unwrap_or_else(|_| "2025-26".to_string());
+    let ingest_every = Duration::from_secs(
+        env::var("INGEST_INTERVAL_SECS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(3600),
+    );
+    ingest::spawn(state.clone(), season, ingest_every);
 
     let app = Router::<AppState>::new()
     .route("/players", get(players::get_all_players))

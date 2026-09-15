@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use dashmap::DashMap;
 use sqlx::PgPool;
 use crate::{models::{PlayerStats, ClientMessage, ServerMessage}, AppState};
@@ -15,9 +17,16 @@ pub async fn hydrate_cache(pool: &PgPool, cache: &DashMap<i32, PlayerStats>) -> 
     .fetch_all(pool)
     .await?;
 
+    let mut live: HashSet<i32> = HashSet::with_capacity(rows.len());
     for stat in rows {
+        live.insert(stat.player_id);
         cache.insert(stat.player_id, stat);
     }
+
+    // Insert-only leaves players who were deleted from the database being served
+    // from cache forever. Drop them after the refresh rather than clearing first,
+    // so readers never observe an empty cache.
+    cache.retain(|player_id, _| live.contains(player_id));
 
     println!("Cache hydrated with {} entries", cache.len());
     Ok(())

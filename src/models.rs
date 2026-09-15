@@ -9,6 +9,8 @@ pub struct Player {
     pub name: String,
     pub position: String,
     pub archetype: Option<String>,
+    pub nba_player_id: Option<i32>,
+    pub team: Option<String>,
 }
 
 #[derive(Debug, Serialize, FromRow, Clone)]
@@ -18,7 +20,10 @@ pub struct PlayerStats {
     pub season: String,
     pub points_per_game: f32,
     pub true_shooting_pct: f32,
-    pub usage_rate: f32,
+    /// NULL for ingested rows — see migrations/20260915120000_ingest_schema.sql
+    pub usage_rate: Option<f32>,
+    pub games_played: Option<i32>,
+    pub minutes_per_game: Option<f32>,
 }
 
 #[derive(Serialize)]
