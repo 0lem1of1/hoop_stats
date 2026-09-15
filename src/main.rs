@@ -17,6 +17,7 @@ pub struct AppState {
     pub jwt_secret: String,
     pub reqwest_client: Client,
     pub webhook_url: String,
+    pub app_base_url: String,
     pub hot_stats: Arc<DashMap<i32, PlayerStats>>,
     pub tx: broadcast::Sender<ServerMessage>,
 }
@@ -35,6 +36,7 @@ async fn main() {
 
     let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
     let webhook_url = env::var("WEBHOOK_URL").expect("WEBHOOK_URL must be set");
+    let app_base_url = env::var("APP_BASE_URL").expect("APP_BASE_URL must be set");
     let reqwest_client = Client::new();
 
     // --- Hot Stats WebSocket infrastructure ---
@@ -51,6 +53,7 @@ async fn main() {
         jwt_secret,
         reqwest_client,
         webhook_url,
+        app_base_url,
         hot_stats: hot_stats_cache,
         tx,
     };
@@ -68,7 +71,15 @@ async fn main() {
     .route("/ws/analytics", get(hot_stats::analytics_ws_handler))
     .with_state(state);
 
-    let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Server running on http://0.0.0.0:3000");
+    let port: u16 = env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3000);
+    let addr = format!("0.0.0.0:{port}");
+
+    let listener = TcpListener::bind(&addr)
+        .await
+        .unwrap_or_else(|e| panic!("Failed to bind {addr}: {e}"));
+    println!("Server running on http://{addr}");
     axum::serve(listener, app).await.unwrap();
 }

@@ -183,7 +183,11 @@ pub async fn forgot_password(
     )
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let reset_link = format!("http://localhost:3000/reset-password?token={}", token);
+    let reset_link = format!(
+        "{}/reset-password?token={}",
+        state.app_base_url.trim_end_matches('/'),
+        token
+    );
 
     let api_key = env::var("SENDGRID_API_KEY")
         .map_err(|_| {
@@ -196,8 +200,6 @@ pub async fn forgot_password(
             eprintln!("SENDGRID_FROM_EMAIL not set — must be a verified sender in SendGrid");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
-
-    eprintln!("[DEBUG] Sending password reset email to {} from {}", user.email, from_email);
 
     let email_payload = SendGridPayload {
         personalizations: vec![Personalization {
