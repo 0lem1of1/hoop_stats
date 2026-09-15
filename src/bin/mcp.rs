@@ -163,7 +163,7 @@ async fn find_by_name(pool: &PgPool, name: &str) -> Result<Vec<StatLine>, ErrorD
     .map_err(db_error)
 }
 
-#[tool_handler]
+#[tool_handler(router = self.tool_router)]
 impl ServerHandler for HoopStats {
     fn get_info(&self) -> ServerInfo {
         let mut info = ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
