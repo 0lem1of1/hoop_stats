@@ -9,14 +9,11 @@ use axum::{
 use futures::{sink::SinkExt, stream::StreamExt};
 
 pub async fn hydrate_cache(pool: &PgPool, cache: &DashMap<i32, PlayerStats>) -> Result<(), sqlx::Error> {
-    println!("Hydrating cache...");
-
     let rows = sqlx::query_as::<_, PlayerStats>(
         "SELECT * FROM stats"
     )
     .fetch_all(pool)
-    .await
-    .expect("Failed to fetch player stats");
+    .await?;
 
     for stat in rows {
         cache.insert(stat.player_id, stat);
@@ -24,6 +21,15 @@ pub async fn hydrate_cache(pool: &PgPool, cache: &DashMap<i32, PlayerStats>) -> 
 
     println!("Cache hydrated with {} entries", cache.len());
     Ok(())
+}
+
+/// Serializing a ServerMessage can only fail on non-finite floats, which the
+/// handlers below reject up front. The fallback keeps a bad value from taking
+/// the whole connection down.
+fn encode(msg: &ServerMessage) -> String {
+    serde_json::to_string(msg).unwrap_or_else(|_| {
+        r#"{"event":"Error","data":{"reason":"failed to encode response"}}"#.to_string()
+    })
 }
 
 pub async fn analytics_ws_handler(
@@ -53,34 +59,42 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                                             .collect();
 
                                         let res = ServerMessage::AnalyticsUpdate(results);
-                                        let _ = sender.send(Message::Text(
-                                            serde_json::to_string(&res).unwrap().into()
-                                        )).await;
+                                        let _ = sender.send(Message::Text(encode(&res).into())).await;
                                     },
                                     ClientMessage::UpdateHypothetical { player_id, usage_adjust } => {
-                                        if let Some(stats) = state.hot_stats.get(&player_id) {
-                                            let new_ppg = stats.points_per_game * (1.0 + usage_adjust);
-                                            let res = ServerMessage::HypotheticalResult {
-                                                player_id,
-                                                new_expected_points: new_ppg,
-                                            };
-                                            let _ = sender.send(Message::Text(
-                                                serde_json::to_string(&res).unwrap().into()
-                                            )).await;
-                                        }
+                                        let res = match state.hot_stats.get(&player_id) {
+                                            _ if !usage_adjust.is_finite() => ServerMessage::Error {
+                                                reason: "usage_adjust must be a finite number".to_string(),
+                                            },
+                                            Some(stats) => {
+                                                let new_ppg = stats.points_per_game * (1.0 + usage_adjust);
+                                                if new_ppg.is_finite() {
+                                                    ServerMessage::HypotheticalResult {
+                                                        player_id,
+                                                        new_expected_points: new_ppg,
+                                                    }
+                                                } else {
+                                                    ServerMessage::Error {
+                                                        reason: "usage_adjust produces an out-of-range result".to_string(),
+                                                    }
+                                                }
+                                            }
+                                            None => ServerMessage::Error {
+                                                reason: format!("no cached stats for player {player_id}"),
+                                            },
+                                        };
+                                        let _ = sender.send(Message::Text(encode(&res).into())).await;
                                     },
                                     ClientMessage::Ping => {
                                         let _ = sender.send(Message::Text(
-                                            serde_json::to_string(&ServerMessage::Pong).unwrap().into()
+                                            encode(&ServerMessage::Pong).into()
                                         )).await;
                                     }
                                 }
                             },
                             Err(e) => {
-                                let err = ServerMessage::Error { reason: format!("Invalid JSON: {}", e) };
-                                let _ = sender.send(Message::Text(
-                                    serde_json::to_string(&err).unwrap().into()
-                                )).await;
+                                let err = ServerMessage::Error { reason: format!("Invalid JSON: {e}") };
+                                let _ = sender.send(Message::Text(encode(&err).into())).await;
                             }
                         }
                     }
@@ -88,8 +102,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                 }
             }
             Ok(global_msg) = broadcast_rx.recv() => {
-                let json = serde_json::to_string(&global_msg).unwrap();
-                if sender.send(Message::Text(json.into())).await.is_err() {
+                if sender.send(Message::Text(encode(&global_msg).into())).await.is_err() {
                     break;
                 }
             }
