@@ -26,7 +26,13 @@ pub async fn signup(
     State(state): State<AppState>,
     Json(payload): Json<SignupRequest>,
 ) -> Result<(StatusCode, Json<SignupResponse>), StatusCode> {
-    
+    if !payload.email.contains('@') || payload.email.len() > 255 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    if payload.password.len() < 8 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
     let password_hash = argon2
@@ -46,10 +52,15 @@ pub async fn signup(
     .map_err(|e| {
         if let sqlx::Error::Database(db_err) = &e {
             if db_err.is_unique_violation() {
-                return StatusCode::CONFLICT; 
+                return StatusCode::CONFLICT;
+            }
+            // favorite_player_id pointing at a player that doesn't exist is the
+            // caller's mistake, not ours.
+            if db_err.is_foreign_key_violation() {
+                return StatusCode::BAD_REQUEST;
             }
         }
-        eprintln!("Failed to insert user: {}", e);
+        eprintln!("Failed to insert user: {e}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
