@@ -13,7 +13,6 @@ use axum::{
 };
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use serde_json::json;
 use std::env;
 
 use crate::models::{

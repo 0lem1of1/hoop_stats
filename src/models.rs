@@ -11,7 +11,7 @@ pub struct Player {
     pub archetype: Option<String>,
 }
 
-#[derive(Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, Clone)]
 pub struct PlayerStats {
     pub id: i32,
     pub player_id: i32,
@@ -107,4 +107,24 @@ pub struct Content {
     #[serde(rename = "type")]
     pub content_type: String,
     pub value: String,
+}
+
+// --- LIVE UPDATE MODELS --- 
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "cmd", content = "data")]
+pub enum ClientMessage {
+    GetTopPerformers { min_ppg: f32 },
+    UpdateHypothetical { player_id: i32, usage_adjust: f32 },
+    Ping,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "event", content = "data")]
+pub enum ServerMessage {
+    AnalyticsUpdate(Vec<PlayerStats>),
+    HypotheticalResult { player_id: i32, new_expected_points: f32 },
+    GlobalAlert { message: String },
+    Pong,
+    Error { reason: String },
 }
