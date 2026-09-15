@@ -17,3 +17,6 @@ chrono = "0.4"
 futures = "0.3"
 dashmap = "5.5"
 thiserror = "2"
+rmcp = { version = "3.3.0", features = ["server", "macros", "transport-io"] }
+schemars = "1"
+anyhow = "1.0.104"
