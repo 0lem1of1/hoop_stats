@@ -1,0 +1,10 @@
+# Never let real secrets into the build context.
+.env
+.env.*
+!.env.example
+
+target
+.git
+.github
+pgdata
+*.md

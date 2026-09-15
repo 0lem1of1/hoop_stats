@@ -35,6 +35,12 @@ async fn main() {
         .await
         .expect("Failed to connect to database");
 
+    // A fresh deploy gets an empty database, so bring the schema up before serving.
+    sqlx::migrate!()
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
+
     let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
     let webhook_url = env::var("WEBHOOK_URL").expect("WEBHOOK_URL must be set");
     let app_base_url = env::var("APP_BASE_URL").expect("APP_BASE_URL must be set");

@@ -1,0 +1,24 @@
+# Rename `app` before first deploy — it must be unique across Fly.
+app = "hoop-stats"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3000"
+  NBA_SEASON = "2025-26"
+  # stats.nba.com rate-limits; hourly is plenty for season averages.
+  INGEST_INTERVAL_SECS = "3600"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  # The ingest loop and WebSocket clients both want a live process.
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
