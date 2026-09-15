@@ -73,12 +73,6 @@ pub struct ResetPasswordRequest {
     pub new_password: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct WebhookPayload {
-    pub email: String,
-    pub reset_link: String,
-}
-
 // --- SENDGRID EMAIL MODELS ---
 
 #[derive(Serialize)]

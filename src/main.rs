@@ -65,7 +65,6 @@ async fn main() {
     .route("/signin", post(auth::signin))
     .route("/forgot-password", post(auth::forgot_password))
     .route("/reset-password", post(auth::reset_password))
-    .route("/webhook-receiver", post(auth::webhook_receiver))
     .route("/ws/analytics", get(hot_stats::analytics_ws_handler))
     .with_state(state);
 

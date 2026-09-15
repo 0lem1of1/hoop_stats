@@ -17,7 +17,7 @@ use std::env;
 
 use crate::models::{
     Claims, SigninRequest, SigninResponse, SignupRequest, SignupResponse,
-    ForgotPasswordRequest, ResetPasswordRequest, WebhookPayload,
+    ForgotPasswordRequest, ResetPasswordRequest,
     SendGridPayload, Personalization, EmailAddress, Content,
 };
 use crate::AppState;
@@ -277,46 +277,4 @@ pub async fn reset_password(
     Ok(Json(serde_json::json!({
         "message": "Password reset successful"
     })))
-}
-
-pub async fn webhook_receiver(
-    State(state): State<AppState>,
-    Json(payload): Json<WebhookPayload>,
-) -> Result<StatusCode, StatusCode> {
-
-    let api_key = env::var("SENDGRID_API_KEY")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let email_payload = SendGridPayload {
-        personalizations: vec![Personalization {
-            to: vec![EmailAddress {
-                email: payload.email.clone(),
-                name: None,
-            }],
-            subject: "Password Reset".to_string(),
-        }],
-        from: EmailAddress {
-            email: "noreply@hoopstats.app".to_string(),
-            name: Some("Hoop Stats Support".to_string()),
-        },
-        subject: "Password Reset".to_string(),
-        content: vec![Content {
-            content_type: "text/plain".to_string(),
-            value: format!("Reset your password using this link: {}", payload.reset_link),
-        }],
-    };
-
-    let result = state.reqwest_client
-        .post(&state.webhook_url)
-        .bearer_auth(api_key)
-        .json(&email_payload)
-        .send()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if !result.status().is_success() {
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    Ok(StatusCode::OK)
 }
