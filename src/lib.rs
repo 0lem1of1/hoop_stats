@@ -16,10 +16,10 @@ use models::{PlayerStats, ServerMessage};
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
-    pub jwt_secret: String,
+    pub jwt_secret: Arc<str>,
     pub reqwest_client: Client,
-    pub webhook_url: String,
-    pub app_base_url: String,
+    pub webhook_url: Arc<str>,
+    pub app_base_url: Arc<str>,
     pub hot_stats: Arc<DashMap<i32, PlayerStats>>,
     pub tx: broadcast::Sender<ServerMessage>,
 }

@@ -24,9 +24,11 @@ async fn main() {
         .await
         .expect("Failed to run migrations");
 
-    let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-    let webhook_url = env::var("WEBHOOK_URL").expect("WEBHOOK_URL must be set");
-    let app_base_url = env::var("APP_BASE_URL").expect("APP_BASE_URL must be set");
+    let jwt_secret: Arc<str> = env::var("JWT_SECRET").expect("JWT_SECRET must be set").into();
+    let webhook_url: Arc<str> = env::var("WEBHOOK_URL").expect("WEBHOOK_URL must be set").into();
+    let app_base_url: Arc<str> = env::var("APP_BASE_URL")
+        .expect("APP_BASE_URL must be set")
+        .into();
 
     let hot_stats_cache = Arc::new(DashMap::new());
     let (tx, _rx) = broadcast::channel::<ServerMessage>(128);

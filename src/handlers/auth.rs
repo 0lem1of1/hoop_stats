@@ -235,7 +235,7 @@ pub async fn forgot_password(
     };
 
     let response = state.reqwest_client
-        .post(&state.webhook_url)
+        .post(state.webhook_url.as_ref())
         .bearer_auth(&api_key)
         .json(&email_payload)
         .send()
