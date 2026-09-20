@@ -4,7 +4,11 @@ pub mod models;
 
 use std::sync::Arc;
 
-use axum::{Router, middleware::from_fn_with_state, routing::{get, post}};
+use axum::{
+    Router,
+    middleware::from_fn_with_state,
+    routing::{get, post},
+};
 use dashmap::DashMap;
 use reqwest::Client;
 use sqlx::PgPool;

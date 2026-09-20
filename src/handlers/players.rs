@@ -1,9 +1,15 @@
-use axum::{extract::{Path, State}, http::StatusCode, Json};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+};
 
-use crate::models::{Player, PlayerStats, PlayerWithStats};
 use crate::AppState;
+use crate::models::{Player, PlayerStats, PlayerWithStats};
 
-pub async fn get_all_players(State(state): State<AppState>) -> Result<Json<Vec<Player>>, StatusCode> {
+pub async fn get_all_players(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<Player>>, StatusCode> {
     let players = sqlx::query_as::<_, Player>("SELECT * FROM players")
         .fetch_all(&state.pool)
         .await
@@ -21,7 +27,7 @@ pub async fn get_player_by_id(
         .fetch_optional(&state.pool)
         .await
         .map_err(|e| {
-            eprintln!("Error fetching player: {e}"); 
+            eprintln!("Error fetching player: {e}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 

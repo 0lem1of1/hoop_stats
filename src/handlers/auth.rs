@@ -1,26 +1,25 @@
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2, PasswordHash, PasswordVerifier,
+    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
 };
 use axum::{
+    Json,
     body::Body,
     extract::{Request, State},
     http::{HeaderMap, StatusCode},
     middleware::Next,
     response::IntoResponse,
-    Json,
     response::Response,
 };
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use std::env;
 
-use crate::models::{
-    Claims, SigninRequest, SigninResponse, SignupRequest, SignupResponse,
-    ForgotPasswordRequest, ResetPasswordRequest,
-    SendGridPayload, Personalization, EmailAddress, Content,
-};
 use crate::AppState;
+use crate::models::{
+    Claims, Content, EmailAddress, ForgotPasswordRequest, Personalization, ResetPasswordRequest,
+    SendGridPayload, SigninRequest, SigninResponse, SignupRequest, SignupResponse,
+};
 
 pub async fn signup(
     State(state): State<AppState>,
@@ -40,7 +39,6 @@ pub async fn signup(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .to_string();
 
-    
     let result = sqlx::query!(
         "INSERT INTO users (email, password_hash, favorite_player_id) VALUES ($1, $2, $3) RETURNING id",
         payload.email,
@@ -77,8 +75,6 @@ pub async fn signin(
     State(state): State<AppState>,
     Json(payload): Json<SigninRequest>,
 ) -> Result<Json<SigninResponse>, StatusCode> {
-
-   
     let record = sqlx::query!(
         "SELECT id, password_hash FROM users WHERE email = $1",
         payload.email
@@ -92,9 +88,8 @@ pub async fn signin(
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    
-    let parsed_hash = PasswordHash::new(&user.password_hash)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let parsed_hash =
+        PasswordHash::new(&user.password_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let is_valid = Argon2::default()
         .verify_password(payload.password.as_bytes(), &parsed_hash)
@@ -131,7 +126,6 @@ pub async fn auth_guard(
     mut req: Request,
     next: Next,
 ) -> Result<Response<Body>, StatusCode> {
-    
     let auth_header = headers
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
@@ -200,17 +194,15 @@ pub async fn forgot_password(
         token
     );
 
-    let api_key = env::var("SENDGRID_API_KEY")
-        .map_err(|_| {
-            eprintln!("SENDGRID_API_KEY not set");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let api_key = env::var("SENDGRID_API_KEY").map_err(|_| {
+        eprintln!("SENDGRID_API_KEY not set");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-    let from_email = env::var("SENDGRID_FROM_EMAIL")
-        .map_err(|_| {
-            eprintln!("SENDGRID_FROM_EMAIL not set — must be a verified sender in SendGrid");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let from_email = env::var("SENDGRID_FROM_EMAIL").map_err(|_| {
+        eprintln!("SENDGRID_FROM_EMAIL not set — must be a verified sender in SendGrid");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let email_payload = SendGridPayload {
         personalizations: vec![Personalization {
@@ -234,7 +226,8 @@ pub async fn forgot_password(
         }],
     };
 
-    let response = state.reqwest_client
+    let response = state
+        .reqwest_client
         .post(state.webhook_url.as_ref())
         .bearer_auth(&api_key)
         .json(&email_payload)

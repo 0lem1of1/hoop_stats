@@ -10,9 +10,9 @@ use std::{collections::HashMap, time::Duration};
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::{models::PlayerStats, AppState};
 use crate::handlers::hot_stats::hydrate_cache;
 use crate::models::ServerMessage;
+use crate::{AppState, models::PlayerStats};
 
 const LEAGUE_LEADERS_URL: &str = "https://stats.nba.com/stats/leagueleaders";
 const BROWSER_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
@@ -78,14 +78,25 @@ fn parse_rows(body: LeagueLeadersResponse) -> Result<Vec<IngestedPlayer>, Ingest
     };
 
     let (c_id, c_name, c_team, c_gp, c_min, c_fga, c_fta, c_pts) = (
-        col("PLAYER_ID")?, col("PLAYER")?, col("TEAM")?, col("GP")?,
-        col("MIN")?, col("FGA")?, col("FTA")?, col("PTS")?,
+        col("PLAYER_ID")?,
+        col("PLAYER")?,
+        col("TEAM")?,
+        col("GP")?,
+        col("MIN")?,
+        col("FGA")?,
+        col("FTA")?,
+        col("PTS")?,
     );
 
     let mut out = Vec::with_capacity(body.result_set.row_set.len());
     for row in body.result_set.row_set {
         let num = |i: usize| row.get(i).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
-        let text = |i: usize| row.get(i).and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let text = |i: usize| {
+            row.get(i)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string()
+        };
 
         let (pts, fga, fta) = (num(c_pts), num(c_fga), num(c_fta));
         let Some(ts) = true_shooting_pct(pts, fga, fta) else {
@@ -192,8 +203,7 @@ pub async fn run_once(state: &AppState, season: &str) -> Result<u64, IngestError
 
     hydrate_cache(&state.pool, &state.hot_stats).await?;
 
-    let snapshot: Vec<PlayerStats> =
-        state.hot_stats.iter().map(|e| e.value().clone()).collect();
+    let snapshot: Vec<PlayerStats> = state.hot_stats.iter().map(|e| e.value().clone()).collect();
 
     // Both sends fail only when nobody is listening, which is not an error.
     let _ = state.tx.send(ServerMessage::GlobalAlert {

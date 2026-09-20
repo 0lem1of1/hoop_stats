@@ -108,7 +108,7 @@ pub struct Content {
     pub value: String,
 }
 
-// --- LIVE UPDATE MODELS --- 
+// --- LIVE UPDATE MODELS ---
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "cmd", content = "data")]
@@ -122,8 +122,15 @@ pub enum ClientMessage {
 #[serde(tag = "event", content = "data")]
 pub enum ServerMessage {
     AnalyticsUpdate(Vec<PlayerStats>),
-    HypotheticalResult { player_id: i32, new_expected_points: f32 },
-    GlobalAlert { message: String },
+    HypotheticalResult {
+        player_id: i32,
+        new_expected_points: f32,
+    },
+    GlobalAlert {
+        message: String,
+    },
     Pong,
-    Error { reason: String },
+    Error {
+        reason: String,
+    },
 }

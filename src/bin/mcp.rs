@@ -73,7 +73,10 @@ fn db_error(e: sqlx::Error) -> ErrorData {
 #[tool_router]
 impl HoopStats {
     fn new(pool: PgPool) -> Self {
-        Self { pool, tool_router: Self::tool_router() }
+        Self {
+            pool,
+            tool_router: Self::tool_router(),
+        }
     }
 
     /// List the best scorers, most points per game first. Use this to answer
@@ -181,8 +184,8 @@ impl ServerHandler for HoopStats {
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
-    let database_url = env::var("DATABASE_URL")
-        .map_err(|_| anyhow::anyhow!("DATABASE_URL must be set"))?;
+    let database_url =
+        env::var("DATABASE_URL").map_err(|_| anyhow::anyhow!("DATABASE_URL must be set"))?;
 
     let pool = PgPoolOptions::new()
         .max_connections(5)

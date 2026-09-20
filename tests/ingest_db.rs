@@ -19,7 +19,11 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 async fn pool() -> Option<PgPool> {
     dotenvy::dotenv().ok();
     let url = std::env::var("DATABASE_URL").ok()?;
-    let pool = PgPoolOptions::new().max_connections(2).connect(&url).await.ok()?;
+    let pool = PgPoolOptions::new()
+        .max_connections(2)
+        .connect(&url)
+        .await
+        .ok()?;
     sqlx::migrate!().run(&pool).await.expect("migrations");
     Some(pool)
 }
@@ -52,18 +56,27 @@ async fn repeated_ingest_updates_instead_of_duplicating() {
 
     cleanup(&pool, &ids).await;
 
-    let first = vec![fixture(-9001, "Dup One", 20.0), fixture(-9002, "Dup Two", 10.0)];
+    let first = vec![
+        fixture(-9001, "Dup One", 20.0),
+        fixture(-9002, "Dup Two", 10.0),
+    ];
     persist(&pool, &season, &first).await.expect("first ingest");
 
     // Same players, new numbers — what every refresh after the first looks like.
-    let second = vec![fixture(-9001, "Dup One", 25.5), fixture(-9002, "Dup Two", 11.0)];
-    persist(&pool, &season, &second).await.expect("second ingest");
-
-    let players: i64 = sqlx::query_scalar("SELECT count(*) FROM players WHERE nba_player_id = ANY($1)")
-        .bind(&ids[..])
-        .fetch_one(&pool)
+    let second = vec![
+        fixture(-9001, "Dup One", 25.5),
+        fixture(-9002, "Dup Two", 11.0),
+    ];
+    persist(&pool, &season, &second)
         .await
-        .unwrap();
+        .expect("second ingest");
+
+    let players: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM players WHERE nba_player_id = ANY($1)")
+            .bind(&ids[..])
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(players, 2, "second ingest inserted duplicate players");
 
     let ppg: f32 = sqlx::query_scalar(
@@ -88,7 +101,10 @@ async fn hydrate_cache_drops_players_deleted_from_the_database() {
 
     cleanup(&pool, &ids).await;
 
-    let players = vec![fixture(-9101, "Stay Here", 20.0), fixture(-9102, "Go Away", 10.0)];
+    let players = vec![
+        fixture(-9101, "Stay Here", 20.0),
+        fixture(-9102, "Go Away", 10.0),
+    ];
     persist(&pool, &season, &players).await.expect("ingest");
 
     let doomed: i32 = sqlx::query_scalar("SELECT id FROM players WHERE nba_player_id = -9102")
@@ -98,7 +114,10 @@ async fn hydrate_cache_drops_players_deleted_from_the_database() {
 
     let cache = Arc::new(DashMap::new());
     hydrate_cache(&pool, &cache).await.expect("first hydrate");
-    assert!(cache.contains_key(&doomed), "player missing after first hydrate");
+    assert!(
+        cache.contains_key(&doomed),
+        "player missing after first hydrate"
+    );
 
     sqlx::query("DELETE FROM players WHERE nba_player_id = -9102")
         .execute(&pool)

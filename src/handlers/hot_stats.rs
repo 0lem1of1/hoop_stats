@@ -1,21 +1,28 @@
 use std::collections::HashSet;
 
+use crate::{
+    AppState,
+    models::{ClientMessage, PlayerStats, ServerMessage},
+};
 use dashmap::DashMap;
 use sqlx::PgPool;
-use crate::{models::{PlayerStats, ClientMessage, ServerMessage}, AppState};
 
 use axum::{
-    extract::{ws::{Message, WebSocket, WebSocketUpgrade}, State},
+    extract::{
+        State,
+        ws::{Message, WebSocket, WebSocketUpgrade},
+    },
     response::IntoResponse,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
 
-pub async fn hydrate_cache(pool: &PgPool, cache: &DashMap<i32, PlayerStats>) -> Result<(), sqlx::Error> {
-    let rows = sqlx::query_as::<_, PlayerStats>(
-        "SELECT * FROM stats"
-    )
-    .fetch_all(pool)
-    .await?;
+pub async fn hydrate_cache(
+    pool: &PgPool,
+    cache: &DashMap<i32, PlayerStats>,
+) -> Result<(), sqlx::Error> {
+    let rows = sqlx::query_as::<_, PlayerStats>("SELECT * FROM stats")
+        .fetch_all(pool)
+        .await?;
 
     let mut live: HashSet<i32> = HashSet::with_capacity(rows.len());
     for stat in rows {
